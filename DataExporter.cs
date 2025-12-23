@@ -10,7 +10,7 @@ namespace cAlgo.Robots
     [Robot(TimeZone = TimeZones.UTC, AccessRights = AccessRights.FullAccess)]
     public class DataExporter : Robot
     {
-        [Parameter("Bars to Export", Group = "Settings", DefaultValue = 10000, MinValue = 100, MaxValue = 50000)]
+        [Parameter("Bars to Export", Group = "Settings", DefaultValue = 10000)]
         public int BarsToExport { get; set; }
 
         [Parameter("Output Path", Group = "Settings", DefaultValue = "D:\\Trading-IA\\data\\")]
@@ -19,37 +19,10 @@ namespace cAlgo.Robots
         [Parameter("Include Volume", Group = "Settings", DefaultValue = true)]
         public bool IncludeVolume { get; set; }
 
-        [Parameter("Auto Start Export", Group = "Settings", DefaultValue = true)]
-        public bool AutoStartExport { get; set; }
-
         protected override void OnStart()
         {
-            if (AutoStartExport)
-            {
-                ExportData();
-                Stop();
-            }
-            else
-            {
-                Print("Bot started. Press 'Export Now' button to export data.");
-                ShowExportButton();
-            }
-        }
-
-        private void ShowExportButton()
-        {
-            var button = Chart.DrawStaticText("ExportButton", "📊 EXPORT DATA 📊", 
-                VerticalAlignment.Center, HorizontalAlignment.Center, Color.LimeGreen);
-        }
-
-        protected override void OnBar()
-        {
-            // Check if user clicked somewhere (we'll use this as trigger)
-            if (!AutoStartExport)
-            {
-                ExportData();
-                Stop();
-            }
+            ExportData();
+            Stop();
         }
 
         private void ExportData()
@@ -80,11 +53,11 @@ namespace cAlgo.Robots
                 // Header
                 if (IncludeVolume)
                 {
-                    csv.AppendLine("timestamp,open,high,low,close,volume");
+                    csv.AppendLine("timestamp;open;high;low;close;volume");
                 }
                 else
                 {
-                    csv.AppendLine("timestamp,open,high,low,close");
+                    csv.AppendLine("timestamp;open;high;low;close");
                 }
 
                 // Calculer l'index de départ
@@ -132,14 +105,14 @@ namespace cAlgo.Robots
                 Print("");
 
                 // Show success on chart
-                Chart.DrawStaticText("ExportSuccess", 
+                Chart.DrawStaticText("ExportSuccess",
                     $"✅ EXPORT COMPLETE!\n\n" +
                     $"File: {fileName}\n" +
                     $"Bars: {actualBarsExported}\n" +
                     $"Location: {OutputPath}\n\n" +
                     $"Bot will stop in 5 seconds...",
-                    VerticalAlignment.Center, 
-                    HorizontalAlignment.Center, 
+                    VerticalAlignment.Center,
+                    HorizontalAlignment.Center,
                     Color.LimeGreen);
 
             }
@@ -151,12 +124,12 @@ namespace cAlgo.Robots
                 Print($"Stack trace: {ex.StackTrace}");
                 Print("=".PadRight(60, '='));
 
-                Chart.DrawStaticText("ExportError", 
+                Chart.DrawStaticText("ExportError",
                     $"❌ EXPORT FAILED!\n\n" +
                     $"Error: {ex.Message}\n\n" +
                     $"Check the log for details.",
-                    VerticalAlignment.Center, 
-                    HorizontalAlignment.Center, 
+                    VerticalAlignment.Center,
+                    HorizontalAlignment.Center,
                     Color.Red);
             }
         }
@@ -176,11 +149,11 @@ namespace cAlgo.Robots
             if (IncludeVolume)
             {
                 var volume = Bars.TickVolumes[index];
-                return $"{timestamp},{open:F5},{high:F5},{low:F5},{close:F5},{volume}";
+                return $"{timestamp};{open:F5};{high:F5};{low:F5};{close:F5};{volume}";
             }
             else
             {
-                return $"{timestamp},{open:F5},{high:F5},{low:F5},{close:F5}";
+                return $"{timestamp};{open:F5};{high:F5};{low:F5};{close:F5}";
             }
         }
 
