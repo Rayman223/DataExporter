@@ -4,4 +4,3 @@ DataExporter.csproj
 bin/*
 obj/*
 .csproj
-data/*

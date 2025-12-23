@@ -4,6 +4,7 @@ using System.Text;
 using System.IO;
 using cAlgo.API;
 using cAlgo.API.Internals;
+using System.Diagnostics.Contracts;
 
 namespace cAlgo.Robots
 {
@@ -60,31 +61,23 @@ namespace cAlgo.Robots
                     csv.AppendLine("timestamp;open;high;low;close");
                 }
 
-                // Calculer l'index de départ
-                int startIndex = Math.Max(0, Bars.Count - BarsToExport);
-                int actualBarsExported = Bars.Count - startIndex;
+                // Calculer l'index de départ (dernières BarsToExport barres)
+                int lastIndex = Bars.Count - 1;
+                int startIndex = Math.Max(0, lastIndex - BarsToExport + 1);
+                int actualBarsExported = (lastIndex >= startIndex) ? (lastIndex - startIndex + 1) : 0;
 
                 Print($"📈 Exporting {actualBarsExported} bars...");
                 Print($"   Symbol: {SymbolName}");
+                Print($"   lastIndex: {lastIndex}");
+                Print($"   startIndex: {startIndex}");
                 Print($"   Timeframe: {MarketSeries.TimeFrame}");
                 Print($"   Date range: {Bars.OpenTimes[startIndex]:yyyy-MM-dd} to {Bars.LastBar.OpenTime:yyyy-MM-dd}");
-
-                // Progress tracking
-                int progressStep = actualBarsExported / 10;
-                int progressCounter = 0;
 
                 // Export data
                 for (int i = startIndex; i < Bars.Count; i++)
                 {
                     string line = FormatBarData(i);
                     csv.AppendLine(line);
-
-                    // Show progress
-                    if (progressStep > 0 && (i - startIndex) % progressStep == 0)
-                    {
-                        progressCounter += 10;
-                        Print($"   Progress: {progressCounter}%");
-                    }
                 }
 
                 // Write to file
