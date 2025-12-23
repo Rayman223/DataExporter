@@ -17,9 +17,6 @@ namespace cAlgo.Robots
         private HashSet<string> _writtenTimestamps;
         private string _fullPath;
 
-        [Parameter("Bars to Export", Group = "Settings", DefaultValue = 10000)]
-        public int BarsToExport { get; set; }
-
         [Parameter("Output Path", Group = "Settings", DefaultValue = "D:\\Trading-IA\\data\\")]
         public string OutputPath { get; set; }
 
