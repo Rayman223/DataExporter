@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Text;
 using System.IO;
+using System.Collections.Generic;
 using cAlgo.API;
 using cAlgo.API.Internals;
 using System.Diagnostics.Contracts;
@@ -11,119 +12,102 @@ namespace cAlgo.Robots
     [Robot(TimeZone = TimeZones.UTC, AccessRights = AccessRights.FullAccess)]
     public class DataExporter : Robot
     {
+        // Private fields for backtest append mode
+        private System.IO.StreamWriter _writer;
+        private HashSet<string> _writtenTimestamps;
+        private string _fullPath;
+
         [Parameter("Bars to Export", Group = "Settings", DefaultValue = 10000)]
         public int BarsToExport { get; set; }
 
         [Parameter("Output Path", Group = "Settings", DefaultValue = "D:\\Trading-IA\\data\\")]
         public string OutputPath { get; set; }
 
-        [Parameter("Include Volume", Group = "Settings", DefaultValue = true)]
-        public bool IncludeVolume { get; set; }
+        // This robot must run only in backtest mode; no toggle parameter needed.
 
         protected override void OnStart()
         {
-            ExportData();
-            Stop();
+            // Prepare output path and filename upfront
+            string timeframe = MarketSeries.TimeFrame.ToString().ToLower();
+            string symbol = SymbolName.ToLower().Replace("/", "");
+            string timestamp = Server.Time.ToString("yyyyMMdd_HHmmss");
+            string fileName = $"{symbol}_{timeframe}_{timestamp}.csv";
+            _fullPath = Path.Combine(OutputPath, fileName);
+
+            if (!Directory.Exists(OutputPath))
+            {
+                Directory.CreateDirectory(OutputPath);
+                Print($"✅ Created directory: {OutputPath}");
+            }
+
+            // Enforce backtest-only execution
+            if (!IsBacktesting)
+            {
+                Print("❌ This robot must be run in backtest mode only. Aborting.");
+                Stop();
+                return;
+            }
+
+            // Backtest mode: open writer and let OnBar() append every bar (no duplicates)
+            _writtenTimestamps = new HashSet<string>();
+            if (File.Exists(_fullPath))
+            {
+                try
+                {
+                    var lines = File.ReadAllLines(_fullPath);
+                    for (int i = 1; i < lines.Length; i++) // skip header
+                    {
+                        var parts = lines[i].Split(';');
+                        if (parts.Length > 0)
+                            _writtenTimestamps.Add(parts[0]);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Print($"Warning reading existing CSV: {ex.Message}");
+                }
+            }
+
+            // Ensure header exists
+            if (!File.Exists(_fullPath))
+            {
+                using (var w = File.CreateText(_fullPath))
+                {
+                    w.WriteLine("timestamp;open;high;low;close;volume");
+                }
+            }
+
+            // Open writer for append
+            _writer = new StreamWriter(_fullPath, true) { AutoFlush = true };
+
+            Print("🔁 Running in backtest mode — bars will be appended via OnBar().");
+            return;
         }
 
-        private void ExportData()
+        protected override void OnBar()
         {
             try
             {
-                Print("=".PadRight(60, '='));
-                Print("📊 DATA EXPORT STARTED");
-                Print("=".PadRight(60, '='));
+                if (!IsBacktesting || _writer == null)
+                    return;
 
-                // Créer le dossier s'il n'existe pas
-                if (!Directory.Exists(OutputPath))
-                {
-                    Directory.CreateDirectory(OutputPath);
-                    Print($"✅ Created directory: {OutputPath}");
-                }
+                // closed bar index: Bars.Count - 2 (Bars.Count -1 is the current forming bar)
+                int index = Bars.Count - 2;
+                if (index < 0)
+                    return;
 
-                // Générer le nom du fichier
-                string timeframe = MarketSeries.TimeFrame.ToString().ToLower();
-                string symbol = SymbolName.ToLower().Replace("/", "");
-                string timestamp = Server.Time.ToString("yyyyMMdd_HHmmss");
-                string fileName = $"{symbol}_{timeframe}_{timestamp}.csv";
-                string fullPath = Path.Combine(OutputPath, fileName);
+                string timestamp = Bars.OpenTimes[index].ToString("yyyy-MM-dd HH:mm:ss");
+                if (_writtenTimestamps != null && _writtenTimestamps.Contains(timestamp))
+                    return; // already written
 
-                // Créer le StringBuilder pour le CSV
-                var csv = new StringBuilder();
-
-                // Header
-                if (IncludeVolume)
-                {
-                    csv.AppendLine("timestamp;open;high;low;close;volume");
-                }
-                else
-                {
-                    csv.AppendLine("timestamp;open;high;low;close");
-                }
-
-                // Calculer l'index de départ (dernières BarsToExport barres)
-                int lastIndex = Bars.Count - 1;
-                int startIndex = Math.Max(0, lastIndex - BarsToExport + 1);
-                int actualBarsExported = (lastIndex >= startIndex) ? (lastIndex - startIndex + 1) : 0;
-
-                Print($"📈 Exporting {actualBarsExported} bars...");
-                Print($"   Symbol: {SymbolName}");
-                Print($"   lastIndex: {lastIndex}");
-                Print($"   startIndex: {startIndex}");
-                Print($"   Timeframe: {MarketSeries.TimeFrame}");
-                Print($"   Date range: {Bars.OpenTimes[startIndex]:yyyy-MM-dd} to {Bars.LastBar.OpenTime:yyyy-MM-dd}");
-
-                // Export data
-                for (int i = startIndex; i < Bars.Count; i++)
-                {
-                    string line = FormatBarData(i);
-                    csv.AppendLine(line);
-                }
-
-                // Write to file
-                File.WriteAllText(fullPath, csv.ToString());
-
-                // Success message
-                Print("=".PadRight(60, '='));
-                Print("✅ EXPORT COMPLETED SUCCESSFULLY!");
-                Print($"📁 File saved: {fullPath}");
-                Print($"📊 Total bars exported: {actualBarsExported}");
-                Print($"💾 File size: {new FileInfo(fullPath).Length / 1024} KB");
-                Print("=".PadRight(60, '='));
-                Print("");
-                Print("📝 Next steps:");
-                Print($"   1. File is ready at: {fullPath}");
-                Print("   2. Run: python prepare_training_data.py");
-                Print("   3. Train your model!");
-                Print("");
-
-                // Show success on chart
-                Chart.DrawStaticText("ExportSuccess",
-                    $"✅ EXPORT COMPLETE!\n\n" +
-                    $"File: {fileName}\n" +
-                    $"Bars: {actualBarsExported}\n" +
-                    $"Location: {OutputPath}\n\n" +
-                    $"Bot will stop in 5 seconds...",
-                    VerticalAlignment.Center,
-                    HorizontalAlignment.Center,
-                    Color.LimeGreen);
-
+                string line = FormatBarData(index);
+                _writer.WriteLine(line);
+                _writtenTimestamps.Add(timestamp);
+                Print($"Appended bar: {timestamp}");
             }
             catch (Exception ex)
             {
-                Print("=".PadRight(60, '='));
-                Print("❌ ERROR DURING EXPORT!");
-                Print($"Error: {ex.Message}");
-                Print($"Stack trace: {ex.StackTrace}");
-                Print("=".PadRight(60, '='));
-
-                Chart.DrawStaticText("ExportError",
-                    $"❌ EXPORT FAILED!\n\n" +
-                    $"Error: {ex.Message}\n\n" +
-                    $"Check the log for details.",
-                    VerticalAlignment.Center,
-                    HorizontalAlignment.Center,
-                    Color.Red);
+                Print($"Error in OnBar: {ex.Message}");
             }
         }
 
@@ -139,19 +123,28 @@ namespace cAlgo.Robots
             // Format timestamp as ISO 8601
             string timestamp = openTime.ToString("yyyy-MM-dd HH:mm:ss");
 
-            if (IncludeVolume)
-            {
-                var volume = Bars.TickVolumes[index];
-                return $"{timestamp};{open:F5};{high:F5};{low:F5};{close:F5};{volume}";
-            }
-            else
-            {
-                return $"{timestamp};{open:F5};{high:F5};{low:F5};{close:F5}";
-            }
+
+            var volume = Bars.TickVolumes[index];
+            return $"{timestamp};{open:F5};{high:F5};{low:F5};{close:F5};{volume}";
         }
 
         protected override void OnStop()
         {
+            try
+            {
+                if (_writer != null)
+                {
+                    _writer.Flush();
+                    _writer.Close();
+                    _writer = null;
+                    Print($"✅ Backtest CSV saved: {_fullPath}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Print($"Error closing writer: {ex.Message}");
+            }
+
             Print("🛑 Data Exporter Bot stopped.");
         }
     }
