@@ -1,5 +1,6 @@
 DataExporter.sln
 .vscode/tasks.json
-DataExporter/DataExporter.csproj
-DataExporter/bin/*
-DataExporter/obj/*
+DataExporter.csproj
+bin/*
+obj/*
+.csproj
