@@ -7,7 +7,7 @@ using cAlgo.API.Internals;
 
 namespace cAlgo.Robots
 {
-    [Robot(TimeZone = TimeZones.UTC, AccessRights = AccessRights.FileSystem)]
+    [Robot(TimeZone = TimeZones.UTC, AccessRights = AccessRights.FullAccess)]
     public class DataExporter : Robot
     {
         [Parameter("Bars to Export", Group = "Settings", DefaultValue = 10000, MinValue = 100, MaxValue = 50000)]
@@ -38,7 +38,7 @@ namespace cAlgo.Robots
 
         private void ShowExportButton()
         {
-            var button = Chart.DrawStaticText("ExportButton", "📊 EXPORT DATA 📊",
+            var button = Chart.DrawStaticText("ExportButton", "📊 EXPORT DATA 📊", 
                 VerticalAlignment.Center, HorizontalAlignment.Center, Color.LimeGreen);
         }
 
@@ -132,14 +132,14 @@ namespace cAlgo.Robots
                 Print("");
 
                 // Show success on chart
-                Chart.DrawStaticText("ExportSuccess",
+                Chart.DrawStaticText("ExportSuccess", 
                     $"✅ EXPORT COMPLETE!\n\n" +
                     $"File: {fileName}\n" +
                     $"Bars: {actualBarsExported}\n" +
                     $"Location: {OutputPath}\n\n" +
                     $"Bot will stop in 5 seconds...",
-                    VerticalAlignment.Center,
-                    HorizontalAlignment.Center,
+                    VerticalAlignment.Center, 
+                    HorizontalAlignment.Center, 
                     Color.LimeGreen);
 
             }
@@ -151,12 +151,12 @@ namespace cAlgo.Robots
                 Print($"Stack trace: {ex.StackTrace}");
                 Print("=".PadRight(60, '='));
 
-                Chart.DrawStaticText("ExportError",
+                Chart.DrawStaticText("ExportError", 
                     $"❌ EXPORT FAILED!\n\n" +
                     $"Error: {ex.Message}\n\n" +
                     $"Check the log for details.",
-                    VerticalAlignment.Center,
-                    HorizontalAlignment.Center,
+                    VerticalAlignment.Center, 
+                    HorizontalAlignment.Center, 
                     Color.Red);
             }
         }
