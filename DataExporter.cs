@@ -25,7 +25,7 @@ namespace cAlgo.Robots
         protected override void OnStart()
         {
             // Prepare output path and filename upfront
-            string timeframe = MarketSeries.TimeFrame.ToString().ToLower();
+            string timeframe = Bars.TimeFrame.ToString().ToLower();
             string symbol = SymbolName.ToLower().Replace("/", "");
             string timestamp = Server.Time.ToString("yyyyMMdd_HHmmss");
             string fileName = $"{symbol}_{timeframe}_{timestamp}.csv";
