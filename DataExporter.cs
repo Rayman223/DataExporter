@@ -17,7 +17,7 @@ namespace cAlgo.Robots
         private HashSet<string> _writtenTimestamps;
         private string _fullPath;
 
-        [Parameter("Output Path", Group = "Settings", DefaultValue = "D:\\Trading-IA\\data\\")]
+        [Parameter("Output Path", Group = "Settings", DefaultValue = "D:\\Trading\\data\\")]
         public string OutputPath { get; set; }
 
         // This robot must run only in backtest mode; no toggle parameter needed.
