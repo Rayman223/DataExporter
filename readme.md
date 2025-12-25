@@ -2,12 +2,6 @@
 
 **DataExporter** is a cBot for **cTrader / cAlgo** designed to **export OHLCV market data** (Open, High, Low, Close, Volume) for a given symbol and timeframe **exclusively during backtesting**.
 
-The data is saved as **CSV files**, ready for:
-- quantitative analysis  
-- machine learning / AI  
-- external backtesting  
-- statistics and data visualisation  
-
 ---
 
 ## ✨ Features
