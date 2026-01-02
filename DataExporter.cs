@@ -1,5 +1,5 @@
 //+------------------------------------------------------------------+
-//| Data Exporter - Version 1.0.0                                    |
+//| Data Exporter - Version 1.1.0                                    |
 //| By Rayman223                                                     |
 //+------------------------------------------------------------------+
 
@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using System.IO;
 using System.Collections.Generic;
+using System.Globalization;
 using cAlgo.API;
 using cAlgo.API.Internals;
 using System.Diagnostics.Contracts;
@@ -79,10 +80,11 @@ namespace cAlgo.Robots
                 }
             }
 
-            // Open writer for append
-            _writer = new StreamWriter(_fullPath, true) { AutoFlush = true };
+            // Open writer for append with UTF-8 encoding
+            _writer = new StreamWriter(_fullPath, true, Encoding.UTF8) { AutoFlush = true };
 
             Print("🔁 Running in backtest mode — bars will be appended via OnBar().");
+            Print("✅ Decimal format: POINT (.) - No comma separator - Ready for analysis!");
             return;
         }
 
@@ -105,7 +107,6 @@ namespace cAlgo.Robots
                 string line = FormatBarData(index);
                 _writer.WriteLine(line);
                 _writtenTimestamps.Add(timestamp);
-                Print($"Appended bar: {timestamp}");
             }
             catch (Exception ex)
             {
@@ -115,19 +116,27 @@ namespace cAlgo.Robots
 
         private string FormatBarData(int index)
         {
-            // Format: timestamp,open,high,low,close,volume
+            // Format: timestamp;open;high;low;close;volume
             var openTime = Bars.OpenTimes[index];
             var open = Bars.OpenPrices[index];
             var high = Bars.HighPrices[index];
             var low = Bars.LowPrices[index];
             var close = Bars.ClosePrices[index];
+            var volume = Bars.TickVolumes[index];
 
             // Format timestamp as ISO 8601
             string timestamp = openTime.ToString("yyyy-MM-dd HH:mm:ss");
 
-
-            var volume = Bars.TickVolumes[index];
-            return $"{timestamp};{open:F5};{high:F5};{low:F5};{close:F5};{volume}";
+            return string.Format(
+                CultureInfo.InvariantCulture,
+                "{0};{1:F5};{2:F5};{3:F5};{4:F5};{5}",
+                timestamp,
+                open,
+                high,
+                low,
+                close,
+                volume
+            );
         }
 
         protected override void OnStop()
